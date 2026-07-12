@@ -1,0 +1,133 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
+All colors MUST be HSL.
+*/
+
+@layer base {
+  :root {
+    --background: 218 100% 97%;
+    --foreground: 218 100% 6%;
+
+    --card: 218 100% 100%;
+    --card-foreground: 218 100% 6%;
+
+    --popover: 218 100% 100%;
+    --popover-foreground: 218 100% 6%;
+
+    --primary: 218 100% 15%;
+    --primary-foreground: 45 100% 85%;
+
+    --secondary: 45 100% 50%;
+    --secondary-foreground: 218 100% 15%;
+
+    --muted: 218 30% 85%;
+    --muted-foreground: 218 30% 35%;
+
+    --accent: 45 100% 60%;
+    --accent-foreground: 218 100% 15%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 218 30% 75%;
+    --input: 218 30% 75%;
+    --ring: 218 100% 15%;
+
+    --radius: 0.75rem;
+
+    /* Jeopardy-specific colors - authentic TV show colors */
+    --jeopardy-blue: 229 98% 8%;
+    --jeopardy-gold: 45 95% 58%;
+    --jeopardy-light-blue: 229 85% 15%;
+    --jeopardy-dark-blue: 229 100% 5%;
+    --jeopardy-white: 0 0% 100%;
+    
+    /* Game board colors - true Jeopardy aesthetic */
+    --board-background: 229 98% 8%;
+    --category-background: 229 85% 15%;
+    --question-background: 229 85% 15%;
+    --question-hover: 229 85% 25%;
+    --answered-background: 229 35% 25%;
+    --answered-text: 229 35% 65%;
+    
+    /* Gradients */
+    --gradient-jeopardy: linear-gradient(135deg, hsl(var(--jeopardy-blue)), hsl(var(--jeopardy-light-blue)));
+    --gradient-gold: linear-gradient(135deg, hsl(var(--jeopardy-gold)), hsl(45 95% 65%));
+    --gradient-question: linear-gradient(145deg, hsl(var(--jeopardy-blue)), hsl(var(--jeopardy-light-blue)));
+    
+    /* Shadows - more dramatic for TV show feel */
+    --shadow-game: 0 8px 25px -5px hsl(var(--jeopardy-dark-blue) / 0.8);
+    --shadow-question: 0 4px 15px -3px hsl(var(--jeopardy-dark-blue) / 0.6);
+    --shadow-glow: 0 0 30px hsl(var(--jeopardy-gold) / 0.4);
+    --shadow-category: inset 0 2px 8px hsl(var(--jeopardy-dark-blue) / 0.3);
+
+    --radius: 0.75rem;
+
+    --sidebar-background: 0 0% 98%;
+
+    --sidebar-foreground: 240 5.3% 26.1%;
+
+    --sidebar-primary: 240 5.9% 10%;
+
+    --sidebar-primary-foreground: 0 0% 98%;
+
+    --sidebar-accent: 240 4.8% 95.9%;
+
+    --sidebar-accent-foreground: 240 5.9% 10%;
+
+    --sidebar-border: 220 13% 91%;
+
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 210 40% 98%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 212.7 26.8% 83.9%;
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+}

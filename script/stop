@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# script/stop — stop the frontend container and the Supabase stack.
+# Database volumes persist; nothing is deleted.
+
+source "$(dirname "$0")/common.sh"
+
+require_tools
+
+info "Stopping frontend"
+docker compose down --remove-orphans >/dev/null 2>&1 || true
+
+if supabase_running; then
+  info "Stopping Supabase stack"
+  supabase stop
+else
+  info "Supabase stack is not running"
+fi
+
+info "Stopped. Local data is preserved."

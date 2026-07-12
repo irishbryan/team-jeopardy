@@ -1,0 +1,59 @@
+#!/usr/bin/env bash
+# script/bootstrap [--empty] [--force] — load the LOCAL database.
+# Default: restore best local snapshot (db/data.dump, else db/data.sql).
+# --empty: schema only. Replaces existing data; asks unless --force.
+
+source "$(dirname "$0")/common.sh"
+
+require_tools
+
+force=false
+empty=false
+for arg in "$@"; do
+  case "$arg" in
+    --force | -f) force=true ;;
+    --empty) empty=true ;;
+    *) die "unknown argument: $arg (usage: script/bootstrap [--empty] [--force])" ;;
+  esac
+done
+
+if [ "$empty" = false ] && ! snapshot_available; then
+  die "no local data found (db/data.dump or db/data.sql). Run script/download-supabase-database-dump first, or use script/bootstrap --empty for a schema-only database."
+fi
+
+was_running=false
+supabase_running && was_running=true
+
+start_supabase
+
+info "Applying any pending database migrations"
+supabase migration up
+
+count="$(games_count)"
+if [ "$count" != "0" ] && [ "$force" = false ]; then
+  printf 'Local database has %s games; bootstrapping REPLACES them. Continue? [y/N] ' "$count"
+  read -r answer
+  case "$answer" in
+    y | Y | yes | YES) ;;
+    *)
+      info "Cancelled; nothing was changed."
+      exit 0
+      ;;
+  esac
+fi
+
+if [ "$empty" = true ]; then
+  info "Clearing application data (schema-only bootstrap)"
+  truncate_all_data
+else
+  restore_snapshot
+fi
+
+verify_schema
+
+if [ "$was_running" = false ]; then
+  info "Stopping Supabase (it was not running before bootstrap)"
+  supabase stop
+fi
+
+info "Bootstrap complete. Run script/server to start the app."

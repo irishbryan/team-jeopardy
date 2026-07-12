@@ -1,0 +1,68 @@
+#!/usr/bin/env bash
+# script/download-supabase-storage — download all production Storage objects
+# (read-only) into storage/<bucket>/<path>. Auth: SUPABASE_SERVICE_ROLE_KEY
+# in .env. See README → Secrets.
+
+source "$(dirname "$0")/common.sh"
+
+require_tools
+load_env
+
+[ -n "${SUPABASE_SERVICE_ROLE_KEY:-}" ] ||
+  die "SUPABASE_SERVICE_ROLE_KEY is not set in .env (Dashboard → Project Settings → API keys → service_role)"
+
+mkdir -p storage
+info "Downloading Storage objects from $PROD_URL (read-only)"
+
+docker run --rm -i \
+  -v "$ROOT/storage:/out" \
+  -e SB_URL="$PROD_URL" \
+  -e SB_KEY="$SUPABASE_SERVICE_ROLE_KEY" \
+  python:3.12-alpine python - <<'PY'
+import json, os, sys, urllib.request, urllib.parse
+
+base, key = os.environ["SB_URL"], os.environ["SB_KEY"]
+
+def req(path, data=None):
+    r = urllib.request.Request(
+        base + path,
+        data=json.dumps(data).encode() if data is not None else None,
+        headers={"Authorization": f"Bearer {key}", "apikey": key,
+                 "Content-Type": "application/json"})
+    return urllib.request.urlopen(r)
+
+buckets = json.load(req("/storage/v1/bucket"))
+if not buckets:
+    print("The project has no Storage buckets; nothing to download.")
+    sys.exit(0)
+
+def walk(bucket, prefix=""):
+    batch, offset = 1000, 0
+    while True:
+        items = json.load(req(f"/storage/v1/object/list/{bucket}",
+                               {"prefix": prefix, "limit": batch, "offset": offset}))
+        for it in items:
+            path = f"{prefix}/{it['name']}" if prefix else it["name"]
+            if it.get("id") is None:      # folder placeholder -> recurse
+                yield from walk(bucket, path)
+            else:
+                yield path
+        if len(items) < batch:
+            break
+        offset += batch
+
+total = 0
+for b in buckets:
+    bid = b["id"]
+    for path in walk(bid):
+        dest = os.path.join("/out", bid, path)
+        os.makedirs(os.path.dirname(dest), exist_ok=True)
+        with req(f"/storage/v1/object/{bid}/{urllib.parse.quote(path)}") as r, open(dest, "wb") as f:
+            f.write(r.read())
+        print(f"  {bid}/{path}")
+        total += 1
+
+print(f"Downloaded {total} object(s) from {len(buckets)} bucket(s).")
+PY
+
+info "Done. Files are in storage/ (git-ignored, stays local)."

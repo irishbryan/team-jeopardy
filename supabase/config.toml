@@ -1,0 +1,25 @@
+project_id = "team-jeopardy"
+
+[db]
+major_version = 17
+
+# Seeding is intentionally disabled. The point-in-time data snapshot in db/
+# is restored explicitly by script/setup and script/reset, which prefer
+# db/data.dump (pg_dump custom format) and fall back to db/data.sql.
+[db.seed]
+enabled = false
+
+[functions.generate-questions]
+verify_jwt = false
+
+# Unused local services disabled for faster `supabase start` (the app has no
+# realtime subscriptions, no auth emails, and analytics/vector are the
+# slowest health checks). Re-enable if the app grows into them.
+[analytics]
+enabled = false
+
+[realtime]
+enabled = false
+
+[inbucket]
+enabled = false

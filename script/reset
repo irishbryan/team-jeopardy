@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+# script/reset [--force] — drop the LOCAL database and replay migrations.
+# Result: clean, empty schema. Never touches the hosted project.
+
+source "$(dirname "$0")/common.sh"
+
+require_tools
+
+force=false
+if [ "${1:-}" = "--force" ] || [ "${1:-}" = "-f" ]; then
+  force=true
+elif [ -n "${1:-}" ]; then
+  die "unknown argument: $1 (usage: script/reset [--force])"
+fi
+
+if [ "$force" = false ]; then
+  printf 'This deletes all LOCAL game data and re-applies migrations. Continue? [y/N] '
+  read -r answer
+  case "$answer" in
+    y | Y | yes | YES) ;;
+    *)
+      info "Cancelled; nothing was changed."
+      exit 0
+      ;;
+  esac
+fi
+
+was_running=false
+supabase_running && was_running=true
+
+start_supabase
+
+info "Resetting local database (drop, re-migrate)"
+supabase db reset --local
+
+verify_schema
+
+if [ "$was_running" = false ]; then
+  info "Stopping Supabase (it was not running before reset)"
+  supabase stop
+fi
+
+info "Reset complete: schema is clean and empty. Run script/bootstrap to load data."

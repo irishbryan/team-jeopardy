@@ -1,0 +1,59 @@
+#!/usr/bin/env bash
+# script/download-supabase-database-dump — pg_dump production data (read-only)
+# into db/data.dump. Auth: SUPABASE_DB_PASSWORD in .env (or SUPABASE_DB_URL
+# to override the connection entirely). See README → Secrets.
+
+source "$(dirname "$0")/common.sh"
+
+require_tools
+load_env
+
+# Session pooler (IPv4-reachable; the direct DB host is IPv6-only). Supabase
+# runs several pooler instances per region — try candidates in order.
+POOLER_PORT="5432"
+POOLER_HOSTS=(
+  "aws-1-${PROD_REGION}.pooler.supabase.com"
+  "aws-0-${PROD_REGION}.pooler.supabase.com"
+  "aws-2-${PROD_REGION}.pooler.supabase.com"
+)
+
+dump_via_host() { # $1 = pooler host; password via PGPASSWORD (no URL-encoding issues)
+  docker run --rm -e PGPASSWORD="$SUPABASE_DB_PASSWORD" postgres:17-alpine \
+    pg_dump -h "$1" -p "$POOLER_PORT" -U "postgres.$PROD_PROJECT_REF" -d postgres \
+    --format=custom --data-only --schema=public \
+    >db/data.dump.tmp 2>/tmp/pgdump-err.$$
+}
+
+mkdir -p db
+info "Dumping public schema data from the hosted project (read-only)"
+if [ -n "${SUPABASE_DB_URL:-}" ]; then
+  docker run --rm postgres:17-alpine \
+    pg_dump "$SUPABASE_DB_URL" --format=custom --data-only --schema=public \
+    >db/data.dump
+elif [ -n "${SUPABASE_DB_PASSWORD:-}" ]; then
+  ok=false
+  for host in "${POOLER_HOSTS[@]}"; do
+    if dump_via_host "$host"; then
+      mv db/data.dump.tmp db/data.dump
+      info "Connected via $host"
+      ok=true
+      break
+    fi
+    # "tenant/user not found" = wrong pooler instance; try the next one.
+    if ! grep -q "not found" /tmp/pgdump-err.$$; then
+      cat /tmp/pgdump-err.$$ >&2
+      rm -f db/data.dump.tmp /tmp/pgdump-err.$$
+      die "pg_dump failed (see above). A password error means SUPABASE_DB_PASSWORD is wrong."
+    fi
+  done
+  rm -f db/data.dump.tmp /tmp/pgdump-err.$$
+  [ "$ok" = true ] ||
+    die "project not found on any known pooler host. Copy the exact Session pooler string from Dashboard → Connect into SUPABASE_DB_URL in .env."
+else
+  die "set SUPABASE_DB_PASSWORD (or a full SUPABASE_DB_URL) in .env. Password: Dashboard → Project Settings → Database → Reset database password."
+fi
+
+[ -s db/data.dump ] || die "export produced an empty file; check the password/URL in .env"
+
+info "Wrote db/data.dump ($(du -h db/data.dump | cut -f1 | tr -d ' ')) — git-ignored, stays local"
+info "Run script/bootstrap to load it into the local database."

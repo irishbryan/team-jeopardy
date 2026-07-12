@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+# script/server — run Supabase + frontend (http://localhost:8080), attached.
+# Ctrl-C stops the frontend; Supabase keeps running for fast restarts.
+# Use script/stop to shut down the whole stack.
+
+source "$(dirname "$0")/common.sh"
+
+require_tools
+load_env
+sync_function_env # picks up OPENAI_API_KEY changes from .env on restart
+
+docker volume inspect team-jeopardy_node_modules >/dev/null 2>&1 ||
+  die "dependencies are not installed yet — run script/setup first"
+
+start_supabase
+
+# Point the frontend at the local stack using the CLI's reported URL and key.
+eval "$(supabase status -o env 2>/dev/null | grep -E '^(API_URL|ANON_KEY)=')"
+[ -n "${API_URL:-}" ] && [ -n "${ANON_KEY:-}" ] ||
+  die "could not read API_URL/ANON_KEY from 'supabase status -o env'"
+export VITE_SUPABASE_URL="$API_URL"
+export VITE_SUPABASE_PUBLISHABLE_KEY="$ANON_KEY"
+
+cleanup() {
+  echo
+  info "Stopping frontend (Supabase stays up for fast restarts; script/stop ends it)"
+  docker compose down --remove-orphans >/dev/null 2>&1 || true
+}
+trap cleanup EXIT
+
+info "Supabase API:    $API_URL"
+info "Supabase Studio: http://127.0.0.1:54323"
+info "Frontend:        http://localhost:8080  (Ctrl-C to stop)"
+
+docker compose up web
